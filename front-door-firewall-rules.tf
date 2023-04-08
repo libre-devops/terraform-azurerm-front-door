@@ -1,5 +1,4 @@
 resource "azurerm_cdn_frontdoor_firewall_policy" "default_firewall_policy" {
-
   for_each = var.create_front_door_firewall_rules == true ? {
     for idx, value in var.front_door_firewall_rules : value.name => merge(value, { index = idx })
   } : {}

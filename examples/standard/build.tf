@@ -231,6 +231,7 @@ module "front_door" {
   front_door_name = "fd-${var.short}-${var.loc}-${terraform.workspace}-01"
 
   front_door_target_app_hostname = module.fnc_app.default_hostname
+  front_door_sku_name            = "Premium_AzureFrontDoor"
 
   load_balancing = {
     additional_latency_in_milliseconds = 0
@@ -307,6 +308,7 @@ module "front_door" {
       redirect_url                      = "https://www.example.com/blocked"
       custom_block_response_status_code = 403
       custom_block_response_body        = base64encode("This request is blocked by the firewall.")
+
       custom_rule = {
         name                           = "custom_rule_1"
         action                         = "Block"
@@ -320,9 +322,10 @@ module "front_door" {
           match_values       = ["192.0.2.0/24"]
           operator           = "IPMatch"
           negation_condition = false
-          transforms = ["Trim"]
+          transforms         = ["Trim"]
         }
       }
+
       managed_rule = {
         type    = "DefaultRuleSet"
         version = "1.0"
@@ -353,4 +356,49 @@ module "front_door" {
       }
     }
   ]
+
+  create_front_door_custom_domain = true
+
+  front_door_custom_domain_options = [
+    {
+      resource_name = "example-frontdoor-custom-domain"
+      name          = "example-domain"
+      domain_name   = "example.com"
+      host_name     = "www.example.com"
+
+      tls = {
+        certificate_type        = "ManagedCertificate"
+        minimum_tls_version     = "TLS12"
+        cdn_frontdoor_secret_id = null
+      }
+
+      soa_record = {
+        email         = "admin.example.com"
+        host_name     = "ns1.example.com"
+        serial_number = "1"
+        expire_time   = 1209600
+        minimum_ttl   = 3600
+        refresh_time  = 604800
+        retry_time    = 86400
+        ttl           = 3600
+        tags          = { "example" = "value" }
+      }
+
+      route_name                   = "example"
+      enabled                      = true
+      route_forwarding_protocol    = "MatchRequest"
+      route_https_redirect_enabled = true
+      route_patterns_to_match      = ["/api/*"]
+      route_supported_protocols    = ["Http", "Https"]
+      link_to_default_domain       = false
+
+      route_cache = {
+        query_string_caching_behavior = "IgnoreQueryString"
+        query_strings                 = ["account", "settings"]
+        compression_enabled           = true
+        content_types_to_compress     = ["text/html", "text/css", "application/javascript"]
+      }
+    }
+  ]
 }
+

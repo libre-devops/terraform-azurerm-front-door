@@ -112,8 +112,8 @@ variable "front_door_firewall_rules" {
 
 variable "create_front_door_custom_domain" {
   description = "Whether a custom domain should be made or not"
-  type = bool
-  default = false
+  type        = bool
+  default     = false
 }
 
 variable "front_door_rules" {
@@ -358,31 +358,53 @@ variable "front_door_origin_group_restore_traffic_time_to_healed_or_new_endpoint
 
 variable "front_door_custom_domain_options" {
   description = "The object which the DNS and custom domain resource conform to"
-  default = []
-  type = object({
+  default     = null
+  type = list(object({
     resource_name = string
-    name = string
-    domain_name = string
-    host_name = string
+    name          = string
+    domain_name   = string
+    host_name     = string
 
     tls = object({
-      certificate_type = optional(string)
-      minimum_tls_version = optional(string, "TLS12")
+      certificate_type        = optional(string)
+      minimum_tls_version     = optional(string, "TLS12")
       cdn_frontdoor_secret_id = optional(string)
     })
 
     soa_record = optional(object({
-      email = optional(string)
-      host_name = optional(string)
+      email         = optional(string)
+      host_name     = optional(string)
       serial_number = optional(string)
-      expire_time = optional(number)
-      minimum_ttl = optional(number)
-      refresh_time = optional(number)
-      retry_time = optional(number)
-      ttl = optional(number)
-      tags = optional(map(string))
+      expire_time   = optional(number)
+      minimum_ttl   = optional(number)
+      refresh_time  = optional(number)
+      retry_time    = optional(number)
+      ttl           = optional(number)
+      tags          = optional(map(string))
     }))
-  })
+
+    route_name                     = optional(string)
+    cdn_frontdoor_endpoint_id      = optional(string)
+    cdn_frontdoor_origin_group_id  = optional(string)
+    cdn_frontdoor_origin_ids       = optional(list(string))
+    cdn_frontdoor_rule_set_ids     = optional(list(string))
+    cdn_frontdoor_custom_domain_id = optional(string)
+    cdn_frontdoor_route_ids        = optional(list(string))
+
+    enabled                         = optional(bool, true)
+    route_forwarding_protocol       = optional(string)
+    route_https_redirect_enabled    = optional(string)
+    route_patterns_to_match         = optional(list(string))
+    route_supported_protocols       = optional(list(string))
+    cdn_frontdoor_custom_domain_ids = optional(list(string))
+    link_to_default_domain          = optional(bool, false)
+    route_cache = optional(object({
+      query_string_caching_behavior = optional(string)
+      query_strings                 = optional(list(string))
+      compression_enabled           = optional(bool)
+      content_types_to_compress     = optional(list(string))
+    }))
+  }))
 }
 
 
