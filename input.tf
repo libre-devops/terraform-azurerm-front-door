@@ -1,47 +1,17 @@
-variable "identity_ids" {
-  description = "Specifies a list of user managed identity ids to be assigned to the VM."
-  type        = list(string)
-  default     = []
-}
-
-variable "identity_type" {
-  description = "The Managed Service Identity Type of this Virtual Machine."
-  type        = string
-  default     = ""
-}
-
-variable "front_door_origin_group_session_affinity_enabled" {
-  description = "Whether session affinity is enabled in the origin group, defaults to true"
+variable "associate_custom_domain" {
+  description = "Whether or not the custom domain (if create) should be associated to the front door"
   type        = bool
   default     = true
 }
 
-variable "front_door_target_app_hostname" {
-  description = "The host name of the application to sit behind the front door"
-  type        = string
+variable "cache" {
+  description = "The cache block in the custom route"
+  type        = any
+  default     = null
 }
 
-variable "front_door_target_app_http_port" {
-  description = "The default http port for the target app"
-  type        = number
-  default     = 80
-}
-
-variable "front_door_target_app_https_port" {
-  description = "The default https port for the target app"
-  type        = number
-  default     = 443
-}
-
-
-variable "front_door_target_app_priority" {
-  description = "The priority for the target app"
-  type        = number
-  default     = 1
-}
-
-variable "create_front_door_rules" {
-  description = "Whether front door rules should be made and added to the default ruleset"
+variable "create_front_door_custom_domain" {
+  description = "Whether a custom domain should be made or not"
   type        = bool
   default     = false
 }
@@ -50,6 +20,83 @@ variable "create_front_door_firewall_rules" {
   description = "Whether you want to create firewall rules or not"
   type        = bool
   default     = true
+}
+
+variable "create_front_door_rules" {
+  description = "Whether front door rules should be made and added to the default ruleset"
+  type        = bool
+  default     = false
+}
+
+variable "front_door_custom_domain_options" {
+  description = "The object which the DNS and custom domain resource conform to"
+  default     = null
+  type = list(object({
+    resource_name = string
+    name          = string
+    domain_name   = string
+    host_name     = string
+
+    tls = object({
+      certificate_type        = optional(string)
+      minimum_tls_version     = optional(string, "TLS12")
+      cdn_frontdoor_secret_id = optional(string)
+    })
+
+    soa_record = optional(object({
+      email         = optional(string)
+      host_name     = optional(string)
+      serial_number = optional(string)
+      expire_time   = optional(number)
+      minimum_ttl   = optional(number)
+      refresh_time  = optional(number)
+      retry_time    = optional(number)
+      ttl           = optional(number)
+      tags          = optional(map(string))
+    }))
+
+    routing_rules = optional(list(object({
+      name                           = optional(string)
+      cdn_frontdoor_endpoint_id      = optional(string)
+      cdn_frontdoor_origin_group_id  = optional(string)
+      cdn_frontdoor_origin_ids       = optional(list(string))
+      cdn_frontdoor_rule_set_ids     = optional(list(string))
+      cdn_frontdoor_custom_domain_id = optional(string)
+      cdn_frontdoor_route_ids        = optional(list(string))
+
+      enabled                         = optional(bool, true)
+      forwarding_protocol             = optional(string)
+      https_redirect_enabled          = optional(string)
+      patterns_to_match               = optional(list(string))
+      supported_protocols             = optional(list(string))
+      cdn_frontdoor_custom_domain_ids = optional(list(string))
+      link_to_default_domain          = optional(bool, false)
+      cache = optional(object({
+        query_string_caching_behavior = optional(string)
+        query_strings                 = optional(list(string))
+        compression_enabled           = optional(bool)
+        content_types_to_compress     = optional(list(string))
+      }))
+    })))
+  }))
+}
+
+variable "front_door_default_rule_name" {
+  description = "The name of the default rule"
+  type        = string
+  default     = null
+}
+
+variable "front_door_default_ruleset_name" {
+  description = "The name of the default ruleset"
+  type        = string
+  default     = null
+}
+
+variable "front_door_endpoint_name" {
+  description = "The name of the front door endpoint name"
+  type        = string
+  default     = null
 }
 
 variable "front_door_firewall_rules" {
@@ -110,10 +157,45 @@ variable "front_door_firewall_rules" {
   }))
 }
 
-variable "create_front_door_custom_domain" {
-  description = "Whether a custom domain should be made or not"
+variable "front_door_name" {
+  description = "The name of the front door resource"
+  type        = string
+}
+
+variable "front_door_origin_group_name" {
+  description = "The name of the front door origin group"
+  type        = string
+  default     = null
+}
+
+variable "front_door_origin_group_restore_traffic_time_to_healed_or_new_endpoint_in_minutes" {
+  description = "ifies the amount of time which should elapse before shifting traffic to another endpoint when a healthy endpoint becomes unhealthy or a new endpoint is added."
+  type        = number
+  default     = 10
+}
+
+variable "front_door_origin_group_session_affinity_enabled" {
+  description = "Whether session affinity is enabled in the origin group, defaults to true"
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "front_door_origin_name" {
+  description = "The name of the front door origin resource (not the resource target"
+  type        = string
+  default     = null
+}
+
+variable "front_door_response_timeout_seconds" {
+  description = "The response timeout in seconds of the front door resource"
+  type        = number
+  default     = 120
+}
+
+variable "front_door_route_name" {
+  type        = string
+  description = "The resource name of the front door route"
+  default     = null
 }
 
 variable "front_door_rules" {
@@ -295,40 +377,10 @@ variable "front_door_rules" {
   }))
 }
 
-variable "front_door_default_rule_name" {
-  description = "The name of the default rule"
+variable "front_door_sku_name" {
+  description = "The name of the front door sku"
   type        = string
-  default     = null
-}
-
-variable "front_door_default_ruleset_name" {
-  description = "The name of the default ruleset"
-  type        = string
-  default     = null
-}
-
-variable "front_door_target_app_weight" {
-  description = "The weight for the target app"
-  type        = number
-  default     = 500
-}
-
-variable "front_door_route_name" {
-  type        = string
-  description = "The resource name of the front door route"
-  default     = null
-}
-
-variable "cache" {
-  description = "The cache block in the custom route"
-  type        = any
-  default     = null
-}
-
-variable "private_link" {
-  description = "The private link block of the origin"
-  type        = any
-  default     = null
+  default     = "Standard_AzureFrontDoor"
 }
 
 variable "front_door_target_app_certificate_name_check" {
@@ -337,11 +389,33 @@ variable "front_door_target_app_certificate_name_check" {
   default     = true
 }
 
-
-variable "front_door_origin_name" {
-  description = "The name of the front door origin resource (not the resource target"
+variable "front_door_target_app_hostname" {
+  description = "The host name of the application to sit behind the front door"
   type        = string
-  default     = null
+}
+
+variable "front_door_target_app_http_port" {
+  description = "The default http port for the target app"
+  type        = number
+  default     = 80
+}
+
+variable "front_door_target_app_https_port" {
+  description = "The default https port for the target app"
+  type        = number
+  default     = 443
+}
+
+variable "front_door_target_app_priority" {
+  description = "The priority for the target app"
+  type        = number
+  default     = 1
+}
+
+variable "front_door_target_app_weight" {
+  description = "The weight for the target app"
+  type        = number
+  default     = 500
 }
 
 variable "health_probe" {
@@ -350,75 +424,16 @@ variable "health_probe" {
   default     = null
 }
 
-variable "associate_custom_domain" {
-  description = "Whether or not the custom domain (if create) should be associated to the front door"
-  type        = bool
-  default     = true
+variable "identity_ids" {
+  description = "Specifies a list of user managed identity ids to be assigned to the VM."
+  type        = list(string)
+  default     = []
 }
 
-variable "front_door_origin_group_restore_traffic_time_to_healed_or_new_endpoint_in_minutes" {
-  description = "ifies the amount of time which should elapse before shifting traffic to another endpoint when a healthy endpoint becomes unhealthy or a new endpoint is added."
-  type        = number
-  default     = 10
-}
-
-variable "front_door_custom_domain_options" {
-  description = "The object which the DNS and custom domain resource conform to"
-  default     = null
-  type = list(object({
-    resource_name = string
-    name          = string
-    domain_name   = string
-    host_name     = string
-
-    tls = object({
-      certificate_type        = optional(string)
-      minimum_tls_version     = optional(string, "TLS12")
-      cdn_frontdoor_secret_id = optional(string)
-    })
-
-    soa_record = optional(object({
-      email         = optional(string)
-      host_name     = optional(string)
-      serial_number = optional(string)
-      expire_time   = optional(number)
-      minimum_ttl   = optional(number)
-      refresh_time  = optional(number)
-      retry_time    = optional(number)
-      ttl           = optional(number)
-      tags          = optional(map(string))
-    }))
-
-    routing_rules = optional(list(object({
-      name                           = optional(string)
-      cdn_frontdoor_endpoint_id      = optional(string)
-      cdn_frontdoor_origin_group_id  = optional(string)
-      cdn_frontdoor_origin_ids       = optional(list(string))
-      cdn_frontdoor_rule_set_ids     = optional(list(string))
-      cdn_frontdoor_custom_domain_id = optional(string)
-      cdn_frontdoor_route_ids        = optional(list(string))
-
-      enabled                         = optional(bool, true)
-      forwarding_protocol             = optional(string)
-      https_redirect_enabled          = optional(string)
-      patterns_to_match               = optional(list(string))
-      supported_protocols             = optional(list(string))
-      cdn_frontdoor_custom_domain_ids = optional(list(string))
-      link_to_default_domain          = optional(bool, false)
-      cache = optional(object({
-        query_string_caching_behavior = optional(string)
-        query_strings                 = optional(list(string))
-        compression_enabled           = optional(bool)
-        content_types_to_compress     = optional(list(string))
-      }))
-    })))
-  }))
-}
-
-variable "front_door_endpoint_name" {
-  description = "The name of the front door endpoint name"
+variable "identity_type" {
+  description = "The Managed Service Identity Type of this Virtual Machine."
   type        = string
-  default     = null
+  default     = ""
 }
 
 variable "load_balancing" {
@@ -427,32 +442,15 @@ variable "load_balancing" {
   default     = null
 }
 
-variable "front_door_origin_group_name" {
-  description = "The name of the front door origin group"
-  type        = string
-  default     = null
-}
-
-variable "front_door_name" {
-  description = "The name of the front door resource"
-  type        = string
-}
-
-variable "front_door_response_timeout_seconds" {
-  description = "The response timeout in seconds of the front door resource"
-  type        = number
-  default     = 120
-}
-
-variable "front_door_sku_name" {
-  description = "The name of the front door sku"
-  type        = string
-  default     = "Standard_AzureFrontDoor"
-}
-
 variable "location" {
   description = "The location for this resource to be put in"
   type        = string
+}
+
+variable "private_link" {
+  description = "The private link block of the origin"
+  type        = any
+  default     = null
 }
 
 variable "rg_name" {
