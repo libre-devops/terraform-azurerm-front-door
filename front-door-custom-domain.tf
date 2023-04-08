@@ -43,28 +43,42 @@ resource "azurerm_cdn_frontdoor_custom_domain" "custom_domain" {
   }
 }
 
+locals {
+  front_door_route_keys = flatten([
+    for index, domain in var.front_door_custom_domain_options : [
+      for rule in domain.routing_rules : {
+        domain_name = domain.name
+        rule_name   = rule.name
+        domain      = domain
+        domain_name = domain.name
+        rule        = rule
+      }
+    ]
+  ])
+}
+
 resource "azurerm_cdn_frontdoor_route" "front_door_route" {
   for_each = var.create_front_door_custom_domain == true ? {
-    for idx, value in var.front_door_custom_domain_options : value.name => merge(value, { index = idx })
+    for k, v in local.front_door_route_keys : k => v
   } : {}
 
-  name                          = try(each.value.route_name, null)
-  cdn_frontdoor_endpoint_id     = try(azurerm_cdn_frontdoor_endpoint.front_door_endpoint.id, each.value.cdn_frontdoor_endpoint_id, null)
-  cdn_frontdoor_origin_group_id = try(azurerm_cdn_frontdoor_origin_group.front_door_origin_group.id, each.value.cdn_frontdoor_origin_group_id, null)
-  cdn_frontdoor_origin_ids      = try(tolist([azurerm_cdn_frontdoor_origin.front_door_origin.id]), tolist(each.value.cdn_frontdoor_origin_ids), null)
-  cdn_frontdoor_rule_set_ids    = try(tolist([azurerm_cdn_frontdoor_rule_set.front_door_default_ruleset.id]), tolist(each.value.cdn_frontdoor_origin_group_ids), null)
+  name                          = try(each.value.rule_name, null)
+  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.front_door_endpoint.id != null ? azurerm_cdn_frontdoor_endpoint.front_door_endpoint.id : try(each.value.cdn_frontdoor_endpoint_id, null)
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.front_door_origin_group.id != null ? azurerm_cdn_frontdoor_origin_group.front_door_origin_group.id : try(each.value.cdn_frontdoor_origin_group_id, null)
+  cdn_frontdoor_origin_ids      = tolist([azurerm_cdn_frontdoor_origin.front_door_origin.id]) != null ? tolist([azurerm_cdn_frontdoor_origin.front_door_origin.id]) : try(tolist(each.value.cdn_frontdoor_origin_ids), null)
+  cdn_frontdoor_rule_set_ids    = tolist([azurerm_cdn_frontdoor_rule_set.front_door_default_ruleset.id]) != null ? tolist([azurerm_cdn_frontdoor_rule_set.front_door_default_ruleset.id]) : try(tolist(each.value.cdn_frontdoor_origin_group_ids), null)
   enabled                       = try(each.value.enabled, true)
 
-  forwarding_protocol    = each.value.route_forwarding_protocol
-  https_redirect_enabled = each.value.route_https_redirect_enabled
-  patterns_to_match      = tolist(each.value.route_patterns_to_match)
-  supported_protocols    = tolist(each.value.route_supported_protocols)
+  forwarding_protocol    = try(each.value.rule.forwarding_protocol, null)
+  https_redirect_enabled = try(each.value.rule.https_redirect_enabled, null)
+  patterns_to_match      = try(tolist(each.value.rule.patterns_to_match), null)
+  supported_protocols    = try(tolist(each.value.rule.supported_protocols), null)
 
-  cdn_frontdoor_custom_domain_ids = try(tolist([azurerm_cdn_frontdoor_custom_domain.custom_domain[each.key].id]), tolist(each.value.cdn_frontdoor_custom_domain_ids), null)
-  link_to_default_domain          = try(each.value.link_to_default_domain, false)
+  cdn_frontdoor_custom_domain_ids = tolist([azurerm_cdn_frontdoor_custom_domain.custom_domain[each.value.domain_name].id]) != null ? tolist([azurerm_cdn_frontdoor_custom_domain.custom_domain[each.value.domain_name].id]) : try(tolist(each.value.rule.cdn_frontdoor_custom_domain_ids), null)
+  link_to_default_domain          = try(each.value.rule.link_to_default_domain, true)
 
   dynamic "cache" {
-    for_each = each.value.route_cache != null ? [each.value.route_cache] : []
+    for_each = each.value.rule.cache != null ? [each.value.rule.cache] : []
     content {
       query_string_caching_behavior = try(cache.value.query_string_caching_behavior, null)
       query_strings                 = try(tolist(cache.value.query_strings), null)
@@ -75,9 +89,12 @@ resource "azurerm_cdn_frontdoor_route" "front_door_route" {
 }
 
 resource "azurerm_cdn_frontdoor_custom_domain_association" "domain_association" {
-  for_each = var.create_front_door_custom_domain == true ? {
-    for idx, value in var.front_door_custom_domain_options : value.name => merge(value, { index = idx })
+  for_each = var.create_front_door_custom_domain == true && var.associate_custom_domain == true ? {
+    for k, v in local.front_door_route_keys : k => v
   } : {}
-  cdn_frontdoor_custom_domain_id = try(azurerm_cdn_frontdoor_custom_domain.custom_domain[each.key].id, each.value.cdn_frontdoor_custom_domain_ids, null)
-  cdn_frontdoor_route_ids        = try(tolist([azurerm_cdn_frontdoor_route.front_door_route[each.key].id]), tolist(each.value.cdn_frontdoor_route_ids), null)
+
+  cdn_frontdoor_custom_domain_id = azurerm_cdn_frontdoor_custom_domain.custom_domain[each.value.domain_name].id
+  cdn_frontdoor_route_ids        = tolist([azurerm_cdn_frontdoor_route.front_door_route[each.key].id])
 }
+
+

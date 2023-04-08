@@ -350,6 +350,12 @@ variable "health_probe" {
   default     = null
 }
 
+variable "associate_custom_domain" {
+  description = "Whether or not the custom domain (if create) should be associated to the front door"
+  type        = bool
+  default     = true
+}
+
 variable "front_door_origin_group_restore_traffic_time_to_healed_or_new_endpoint_in_minutes" {
   description = "ifies the amount of time which should elapse before shifting traffic to another endpoint when a healthy endpoint becomes unhealthy or a new endpoint is added."
   type        = number
@@ -383,30 +389,31 @@ variable "front_door_custom_domain_options" {
       tags          = optional(map(string))
     }))
 
-    route_name                     = optional(string)
-    cdn_frontdoor_endpoint_id      = optional(string)
-    cdn_frontdoor_origin_group_id  = optional(string)
-    cdn_frontdoor_origin_ids       = optional(list(string))
-    cdn_frontdoor_rule_set_ids     = optional(list(string))
-    cdn_frontdoor_custom_domain_id = optional(string)
-    cdn_frontdoor_route_ids        = optional(list(string))
+    routing_rules = optional(list(object({
+      name                           = optional(string)
+      cdn_frontdoor_endpoint_id      = optional(string)
+      cdn_frontdoor_origin_group_id  = optional(string)
+      cdn_frontdoor_origin_ids       = optional(list(string))
+      cdn_frontdoor_rule_set_ids     = optional(list(string))
+      cdn_frontdoor_custom_domain_id = optional(string)
+      cdn_frontdoor_route_ids        = optional(list(string))
 
-    enabled                         = optional(bool, true)
-    route_forwarding_protocol       = optional(string)
-    route_https_redirect_enabled    = optional(string)
-    route_patterns_to_match         = optional(list(string))
-    route_supported_protocols       = optional(list(string))
-    cdn_frontdoor_custom_domain_ids = optional(list(string))
-    link_to_default_domain          = optional(bool, false)
-    route_cache = optional(object({
-      query_string_caching_behavior = optional(string)
-      query_strings                 = optional(list(string))
-      compression_enabled           = optional(bool)
-      content_types_to_compress     = optional(list(string))
-    }))
+      enabled                         = optional(bool, true)
+      forwarding_protocol             = optional(string)
+      https_redirect_enabled          = optional(string)
+      patterns_to_match               = optional(list(string))
+      supported_protocols             = optional(list(string))
+      cdn_frontdoor_custom_domain_ids = optional(list(string))
+      link_to_default_domain          = optional(bool, false)
+      cache = optional(object({
+        query_string_caching_behavior = optional(string)
+        query_strings                 = optional(list(string))
+        compression_enabled           = optional(bool)
+        content_types_to_compress     = optional(list(string))
+      }))
+    })))
   }))
 }
-
 
 variable "front_door_endpoint_name" {
   description = "The name of the front door endpoint name"

@@ -220,9 +220,8 @@ module "fnc_app" {
   }
 }
 
-
 module "front_door" {
-  source = "../../"
+  source = "libre-devops/front-door/azurerm"
 
   rg_name  = module.rg.rg_name
   location = module.rg.rg_location
@@ -240,7 +239,6 @@ module "front_door" {
   }
 
   create_front_door_rules = true
-  # Assuming other required variables are defined here
   front_door_rules = [
     {
       name               = "rule1"
@@ -322,7 +320,6 @@ module "front_door" {
           match_values       = ["192.0.2.0/24"]
           operator           = "IPMatch"
           negation_condition = false
-#          transforms         = ["Trim"]
         }
       }
 
@@ -340,13 +337,13 @@ module "front_door" {
   ]
 
   create_front_door_custom_domain = true
-
   front_door_custom_domain_options = [
     {
-      resource_name = "example-frontdoor-custom-domain"
-      name          = "libredevops-cloud"
-      domain_name   = "libredevops.cloud"
-      host_name     = "www.libredevops.cloud"
+      resource_name          = "example-frontdoor-custom-domain"
+      name                   = "libredevops-cloud"
+      domain_name            = "libredevops.cloud"
+      host_name              = "www.libredevops.cloud"
+      link_to_default_domain = false
 
       tls = {
         certificate_type        = "ManagedCertificate"
@@ -366,21 +363,24 @@ module "front_door" {
         tags          = { "example" = "value" }
       }
 
-      route_name                   = "example"
-      enabled                      = true
-      route_forwarding_protocol    = "MatchRequest"
-      route_https_redirect_enabled = true
-      route_patterns_to_match      = ["/api/*"]
-      route_supported_protocols    = ["Http", "Https"]
-      link_to_default_domain       = false
-
-      route_cache = {
-        query_string_caching_behavior = "IgnoreQueryString"
-#        query_strings                 = ["account", "settings"]
-        compression_enabled           = true
-        content_types_to_compress     = ["text/html", "text/css", "application/javascript"]
-      }
+      routing_rules = [
+        {
+          name                   = "route1"
+          enabled                = true
+          forwarding_protocol    = "MatchRequest"
+          https_redirect_enabled = "true"
+          patterns_to_match      = ["/*"]
+          supported_protocols    = ["Http", "Https"]
+        },
+        {
+          name                   = "route2"
+          enabled                = true
+          forwarding_protocol    = "MatchRequest"
+          https_redirect_enabled = "true"
+          patterns_to_match      = ["/images/*"]
+          supported_protocols    = ["Http", "Https"]
+        }
+      ]
     }
   ]
 }
-
