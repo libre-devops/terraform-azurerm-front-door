@@ -1,63 +1,63 @@
-locals {
-  front_door_profile_name      = "MyFrontDoor"
-  front_door_endpoint_name     = "afd-${lower(random_id.front_door_endpoint_name.hex)}"
-  front_door_origin_group_name = "MyOriginGroup"
-  front_door_origin_name       = "MyAppServiceOrigin"
-  front_door_route_name        = "MyRoute"
+resource "azurerm_cdn_frontdoor_profile" "front_door_profile" {
+  name                     = var.front_door_name
+  resource_group_name      = var.rg_name
+  sku_name                 = var.front_door_sku_name
+  response_timeout_seconds = var.front_door_response_timeout_seconds
+  tags                     = var.tags
 }
 
-resource "azurerm_cdn_frontdoor_profile" "my_front_door" {
-  name                = local.front_door_profile_name
-  resource_group_name = azurerm_resource_group.my_resource_group.name
-  sku_name            = var.front_door_sku_name
+resource "azurerm_cdn_frontdoor_endpoint" "front_door_endpoint" {
+  name                     = var.front_door_endpoint_name == null ? "fdep-${var.front_door_name}" : try(var.front_door_endpoint_name, null)
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.front_door_profile.id
+  enabled                  = true
+  tags                     = var.tags
 }
 
-resource "azurerm_cdn_frontdoor_endpoint" "my_endpoint" {
-  name                     = local.front_door_endpoint_name
-  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.my_front_door.id
-}
+resource "azurerm_cdn_frontdoor_origin_group" "front_door_origin_group" {
+  name                                                      = var.front_door_origin_group_name == null ? "fdog-${var.front_door_name}" : try(var.front_door_origin_group_name, null)
+  cdn_frontdoor_profile_id                                  = azurerm_cdn_frontdoor_profile.front_door_profile.id
+  session_affinity_enabled                                  = var.front_door_origin_group_session_affinity_enabled
+  restore_traffic_time_to_healed_or_new_endpoint_in_minutes = var.front_door_origin_group_restore_traffic_time_to_healed_or_new_endpoint_in_minutes
 
-resource "azurerm_cdn_frontdoor_origin_group" "my_origin_group" {
-  name                     = local.front_door_origin_group_name
-  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.my_front_door.id
-  session_affinity_enabled = true
-
-  load_balancing {
-    sample_size                 = 4
-    successful_samples_required = 3
+  dynamic "load_balancing" {
+    for_each = try(var.load_balancing, null) != null ? [1] : []
+    content {
+      additional_latency_in_milliseconds = try(var.load_balancing["additional_latency_in_milliseconds"], null)
+      sample_size                        = try(var.load_balancing["sample_size"], null)
+      successful_samples_required        = try(var.load_balancing["successful_samples_required"], null)
+    }
   }
 
-  health_probe {
-    path                = "/"
-    request_type        = "HEAD"
-    protocol            = "Https"
-    interval_in_seconds = 100
+  dynamic "health_probe" {
+    for_each = try(var.health_probe, null) != null ? [1] : []
+    content {
+      protocol            = try(var.health_probe["protocol"], "Https", null)
+      interval_in_seconds = try(var.health_probe["interval_in_seconds"], null)
+      request_type        = try(var.health_probe["request_type"], "HEAD", null)
+      path                = try(var.health_probe["path"], "/", null)
+    }
   }
 }
 
-resource "azurerm_cdn_frontdoor_origin" "my_app_service_origin" {
-  name                          = local.front_door_origin_name
-  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.my_origin_group.id
-
+resource "azurerm_cdn_frontdoor_origin" "front_door_origin" {
+  name                           = var.front_door_origin_name == null ? "fdor-${var.front_door_name}" : try(var.front_door_origin_name, null)
+  cdn_frontdoor_origin_group_id  = azurerm_cdn_frontdoor_origin_group.front_door_origin_group.id
   enabled                        = true
-  host_name                      = azurerm_windows_web_app.app.default_hostname
-  http_port                      = 80
-  https_port                     = 443
-  origin_host_header             = azurerm_windows_web_app.app.default_hostname
-  priority                       = 1
-  weight                         = 1000
-  certificate_name_check_enabled = true
-}
+  host_name                      = var.front_door_target_app_hostname
+  http_port                      = try(var.front_door_target_app_http_port, 80, null)
+  https_port                     = try(var.front_door_target_app_https_port, 443, null)
+  origin_host_header             = var.front_door_target_app_hostname
+  priority                       = try(var.front_door_target_app_priority, null)
+  weight                         = try(var.front_door_target_app_weight, null)
+  certificate_name_check_enabled = try(var.front_door_target_app_certificate_name_check, true, null)
 
-resource "azurerm_cdn_frontdoor_route" "my_route" {
-  name                          = local.front_door_route_name
-  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.my_endpoint.id
-  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.my_origin_group.id
-  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.my_app_service_origin.id]
-
-  supported_protocols    = ["Http", "Https"]
-  patterns_to_match      = ["/*"]
-  forwarding_protocol    = "HttpsOnly"
-  link_to_default_domain = true
-  https_redirect_enabled = true
+  dynamic "private_link" {
+    for_each = try(var.private_link, null) != null ? [1] : []
+    content {
+      request_message        = try(var.private_link["request_message"], null)
+      target_type            = try(var.private_link["target_type"], null)
+      location               = try(var.private_link["location"], null)
+      private_link_target_id = try(var.private_link["private_link_target_id"], null)
+    }
+  }
 }
