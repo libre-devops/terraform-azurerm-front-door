@@ -310,7 +310,7 @@ module "front_door" {
       custom_block_response_body        = base64encode("This request is blocked by the firewall.")
 
       custom_rule = {
-        name                           = "custom_rule_1"
+        name                           = "CustomRule1"
         action                         = "Block"
         enabled                        = true
         priority                       = 100
@@ -322,7 +322,7 @@ module "front_door" {
           match_values       = ["192.0.2.0/24"]
           operator           = "IPMatch"
           negation_condition = false
-          transforms         = ["Trim"]
+#          transforms         = ["Trim"]
         }
       }
 
@@ -330,24 +330,6 @@ module "front_door" {
         type    = "DefaultRuleSet"
         version = "1.0"
         action  = "Allow"
-        override = {
-          rule_group_name = "SQLInjection"
-          exclusion = {
-            match_variable = "QueryStringArgNames"
-            operator       = "Contains"
-            selector       = "value"
-          }
-          rule = {
-            rule_id = "942100"
-            action  = "Block"
-            enabled = true
-            exclusion = {
-              match_variable = "QueryStringArgNames"
-              operator       = "Contains"
-              selector       = "value"
-            }
-          }
-        }
         exclusion = {
           match_variable = "RequestHeaderNames"
           operator       = "Contains"
@@ -362,9 +344,9 @@ module "front_door" {
   front_door_custom_domain_options = [
     {
       resource_name = "example-frontdoor-custom-domain"
-      name          = "example-domain"
-      domain_name   = "example.com"
-      host_name     = "www.example.com"
+      name          = "libredevops-cloud"
+      domain_name   = "libredevops.cloud"
+      host_name     = "www.libredevops.cloud"
 
       tls = {
         certificate_type        = "ManagedCertificate"
@@ -373,8 +355,8 @@ module "front_door" {
       }
 
       soa_record = {
-        email         = "admin.example.com"
-        host_name     = "ns1.example.com"
+        email         = "admin.libredevops.cloud"
+        host_name     = "ns1.libredevops.cloud"
         serial_number = "1"
         expire_time   = 1209600
         minimum_ttl   = 3600
@@ -394,7 +376,7 @@ module "front_door" {
 
       route_cache = {
         query_string_caching_behavior = "IgnoreQueryString"
-        query_strings                 = ["account", "settings"]
+#        query_strings                 = ["account", "settings"]
         compression_enabled           = true
         content_types_to_compress     = ["text/html", "text/css", "application/javascript"]
       }

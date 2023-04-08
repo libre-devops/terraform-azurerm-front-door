@@ -83,28 +83,28 @@ variable "front_door_firewall_rules" {
       type    = optional(string)
       version = optional(string, "2.1")
       action  = optional(string)
-      override = object({
-        rule_group_name = string
+      override = optional(object({
+        rule_group_name = optional(string)
         exclusion = optional(object({
-          match_variable = string
-          operator       = string
-          selector       = string
+          match_variable = optional(string)
+          operator       = optional(string)
+          selector       = optional(string)
         }))
-        rule = object({
-          rule_id = string
-          action  = string
+        rule = optional(object({
+          rule_id = optional(string)
+          action  = optional(string)
           enabled = optional(bool, false)
           exclusion = optional(object({
-            match_variable = string
-            operator       = string
-            selector       = string
+            match_variable = optional(string)
+            operator       = optional(string)
+            selector       = optional(string)
           }))
-        })
-      })
+        }))
+      }))
       exclusion = optional(object({
-        match_variable = string
-        operator       = string
-        selector       = string
+        match_variable = optional(string)
+        operator       = optional(string)
+        selector       = optional(string)
       }))
     }))
   }))

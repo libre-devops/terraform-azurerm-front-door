@@ -60,7 +60,7 @@ resource "azurerm_cdn_frontdoor_route" "front_door_route" {
   patterns_to_match      = tolist(each.value.route_patterns_to_match)
   supported_protocols    = tolist(each.value.route_supported_protocols)
 
-  cdn_frontdoor_custom_domain_ids = try(tolist(tolist([azurerm_cdn_frontdoor_custom_domain.custom_domain[each.key].id]), each.value.cdn_frontdoor_custom_domain_ids, null))
+  cdn_frontdoor_custom_domain_ids = try(tolist([azurerm_cdn_frontdoor_custom_domain.custom_domain[each.key].id]), tolist(each.value.cdn_frontdoor_custom_domain_ids), null)
   link_to_default_domain          = try(each.value.link_to_default_domain, false)
 
   dynamic "cache" {
@@ -79,5 +79,5 @@ resource "azurerm_cdn_frontdoor_custom_domain_association" "domain_association" 
     for idx, value in var.front_door_custom_domain_options : value.name => merge(value, { index = idx })
   } : {}
   cdn_frontdoor_custom_domain_id = try(azurerm_cdn_frontdoor_custom_domain.custom_domain[each.key].id, each.value.cdn_frontdoor_custom_domain_ids, null)
-  cdn_frontdoor_route_ids        = try(tolist(azurerm_cdn_frontdoor_route.front_door_route[each.key].id), tolist(each.value.cdn_frontdoor_route_ids), null)
+  cdn_frontdoor_route_ids        = try(tolist([azurerm_cdn_frontdoor_route.front_door_route[each.key].id]), tolist(each.value.cdn_frontdoor_route_ids), null)
 }
